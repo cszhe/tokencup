@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-chess
+PyMySQL
+
+# test / judge dependencies
+pytest
+httpx

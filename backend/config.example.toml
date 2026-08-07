@@ -1,0 +1,15 @@
+# TokenCup configuration template.
+# Copy to config.toml and fill in your real credentials:
+#   cp config.example.toml config.toml
+# config.toml is git-ignored.
+
+[database]
+host = "localhost"
+port = 3306
+user = "tokencup"
+password = "changeme"
+database = "tokencup"
+
+[server]
+host = "0.0.0.0"
+port = 8000
