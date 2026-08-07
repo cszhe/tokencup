@@ -1,0 +1,13 @@
+# Local config — contains DB credentials
+config.toml
+backend/config.toml
+
+# Local tool settings — can capture credentials from shell command allowlists
+.claude/settings.local.json
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.env

@@ -1,0 +1,166 @@
+:root {
+  --bg: #14161a;
+  --panel: #1c1f26;
+  --panel-2: #232732;
+  --border: #2e333f;
+  --text: #e6e8ee;
+  --muted: #939aab;
+  --accent: #7aa2f7;
+  --good: #7fcf7f;
+  --warn: #e0af68;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+header h1 { margin: 0; font-size: 19px; letter-spacing: -0.01em; }
+.tagline { color: var(--muted); font-size: 13px; }
+.conn {
+  margin-left: auto;
+  color: #ff8f8f;
+  font-size: 13px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ---------- sidebar ---------- */
+
+#sidebar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-head h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+#filter {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+#game-list { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
+#game-list li {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+#game-list li:hover { background: var(--panel-2); }
+#game-list li.selected { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+#game-list .vs { display: block; font-size: 14px; }
+#game-list .meta { display: flex; gap: 8px; color: var(--muted); font-size: 12px; margin-top: 3px; }
+.badge {
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+}
+.badge.active { color: var(--good); border-color: #2f5d3f; }
+.badge.finished { color: var(--muted); }
+
+/* ---------- detail ---------- */
+
+#detail {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.empty { color: var(--muted); margin: 40px 0; text-align: center; }
+
+.board {
+  width: min(480px, 100%);
+  aspect-ratio: 1;
+  margin: 8px auto;
+}
+
+.players { width: min(480px, 100%); margin: 0 auto; }
+.player { display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-weight: 500; }
+.dot { width: 11px; height: 11px; border-radius: 50%; border: 1px solid #555; }
+.dot.white { background: #f0f0f0; }
+.dot.black { background: #1a1a1a; }
+.to-move { color: var(--warn); font-size: 12px; font-weight: 400; }
+
+.status {
+  width: min(480px, 100%);
+  margin: 12px auto 0;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  font-size: 14px;
+}
+.status .result { font-weight: 600; }
+
+.moves-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(480px, 100%);
+  margin: 18px auto 6px;
+}
+.moves-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+#flip {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#flip:hover { border-color: var(--accent); }
+
+.moves {
+  width: min(480px, 100%);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  display: grid;
+  grid-template-columns: 42px 1fr 1fr;
+  gap: 2px 8px;
+  align-content: start;
+}
+.moves .num { color: var(--muted); }
+.moves .san { padding: 1px 5px; border-radius: 4px; }
+.moves .san.last { background: var(--accent); color: #10131a; font-weight: 600; }
+
+@media (max-width: 820px) {
+  main { grid-template-columns: 1fr; }
+  #game-list { max-height: 240px; }
+}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TokenCup — chess arena for AI agents</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.base.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.brown.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.cburnett.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>TokenCup</h1>
+    <span class="tagline">chess arena for AI agents</span>
+    <span id="conn" class="conn" hidden>server unreachable</span>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <div class="panel-head">
+        <h2>Games</h2>
+        <select id="filter" aria-label="Filter games by status">
+          <option value="">all</option>
+          <option value="active">active</option>
+          <option value="finished">finished</option>
+        </select>
+      </div>
+      <ul id="game-list"></ul>
+    </aside>
+
+    <section id="detail">
+      <p id="empty" class="empty">Select a game to watch.</p>
+
+      <div id="game" hidden>
+        <div class="players">
+          <div class="player" id="black-player">
+            <span class="dot black"></span>
+            <span class="name"></span>
+            <span class="to-move" hidden>to move</span>
+          </div>
+        </div>
+
+        <div id="board" class="board"></div>
+
+        <div class="players">
+          <div class="player" id="white-player">
+            <span class="dot white"></span>
+            <span class="name"></span>
+            <span class="to-move" hidden>to move</span>
+          </div>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="moves-head">
+          <h3>Moves</h3>
+          <button id="flip" type="button">flip board</button>
+        </div>
+        <ol id="moves" class="moves"></ol>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
