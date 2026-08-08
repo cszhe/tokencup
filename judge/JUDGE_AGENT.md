@@ -198,6 +198,43 @@ If extraction returns nothing, that is **not** a forfeit-worthy chess error. Re-
 agent is drawing on the terminal's alternate screen and those rows are gone. Fall back to
 asking that agent to write its answer to a file and reading the file.
 
+### The reply must be new
+
+`herdr agent prompt --wait` can return while the agent is still thinking, and Herdr cannot
+reliably tell that every harness is `working`. Read too early and you get the player's
+*previous* answer — which you then submit, the server rejects as illegal, and the player
+gets blamed for a move it never made.
+
+So record the last move-shaped line **before** prompting, and require the line after
+prompting to differ. If it still has not changed after a generous wait, return *nothing*
+rather than the stale line: an empty answer costs a re-prompt, a stale answer costs the
+player one of its three chances. `ask.sh` does this.
+
+### Harness quirks
+
+Terminal agents differ in ways that will silently break a match. Known cases:
+
+| Harness | Quirk | Handling |
+| --- | --- | --- |
+| GitHub Copilot CLI | **Never submits a multi-line prompt** — Enter inserts a newline, so prompts pile up unsent in the input box | Keep every prompt to a single line; `ask.sh` also presses Enter when Herdr reports `agent_prompt_stalled` |
+| OpenCode, Antigravity | Submit normally | Nothing needed |
+
+**Keep every prompt on one line.** It costs nothing on harnesses that do not need it and is
+the difference between working and silently doing nothing on ones that do. If a player
+seems to have stopped responding, look at its pane before assuming anything about the
+player — unsent text in the input box is the tell.
+
+### Do not add fixed sleeps to the turn loop
+
+Waiting is per-ply cost multiplied by roughly a hundred. `herdr agent prompt --wait`
+already blocks until the agent settles, so on that path the agent is idle when it returns
+and any further "wait for it to start working" poll can never match — it just burns its
+entire timeout, every ply. A 15-second poll like that adds about 12 minutes to a 48-ply
+game and looks, from the outside, like the board updating slowly.
+
+Only wait when you actually bypassed `--wait` (the hand-submitted Enter path), and let
+every other wait exit as soon as its condition is met.
+
 ## When a move is rejected
 
 The server returns three failure codes, and they mean different things:
@@ -223,6 +260,32 @@ Then re-ask. **Three rejections in a row and that side forfeits:**
 ```bash
 ./tc.sh --resign black    # the side that forfeited; the other side wins
 ```
+
+### Never forfeit without evidence the player actually answered
+
+**This is the rule most likely to hand someone an undeserved loss, so treat it as
+absolute:** a forfeit requires three rejections of moves the player *demonstrably sent
+this turn*. If your own tooling failed — the prompt never submitted, the pane read came
+back empty, you read a stale line, a command timed out — that is **your** failure and it
+costs the player nothing. Reset the budget and try again.
+
+`ply.sh` prints `FORFEIT` when it runs out of attempts, but deliberately does **not** call
+`/resign`. Ending a game is always a judge decision. When you see that message, go and
+look at the pane before you act:
+
+```bash
+herdr agent read <pane> --source visible --lines 40
+```
+
+You are checking for one thing: **did the player actually produce three different moves
+this turn?** If the pane shows your prompts stacked up unsent, or the same move repeated
+verbatim, or no new reply at all, it is a tooling failure. Fix the tooling. Do not resign
+the game.
+
+In the second reference match this fired twice against a player that had done nothing
+wrong: once because the harness never submitted the prompt, and once because a stale read
+resubmitted its previous move three times. A judge that trusted the `FORFEIT` line would
+have ended a healthy game at move 5.
 
 Both real illegal moves in this match were self-blocks — a bishop whose diagonal was
 occupied by its own knight, and a rook that could not reach a square its own rook already

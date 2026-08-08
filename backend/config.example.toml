@@ -11,5 +11,9 @@ password = "changeme"
 database = "tokencup"
 
 [server]
-host = "0.0.0.0"
+# Loopback only. The API has no auth by design -- the judge is the sole trusted
+# client -- so POST /games/{id}/moves, /resign and /adjudicate are writable by
+# anyone who can reach this port. Do not bind 0.0.0.0 on a shared network; use
+# an SSH tunnel to watch from another machine.
+host = "127.0.0.1"
 port = 8000

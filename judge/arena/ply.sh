@@ -10,9 +10,7 @@ for attempt in $(seq 1 "${TC_RETRIES:-3}"); do
   MOVE=$("$D/ask.sh" "$PANE" "$MSG")
   if [ -z "$MOVE" ]; then
     echo "[judge] $COLOUR sent no readable move (attempt $attempt)"
-    MSG="I could not find a move in your reply. Reply with ONLY the move in algebraic notation and nothing else.
-
-$CTX"
+    MSG="I could not find a move in your reply -- reply with ONLY the move in algebraic notation and nothing else. $CTX"
     continue
   fi
   echo "[$COLOUR] $MOVE"
@@ -21,11 +19,7 @@ $CTX"
     REJECTED*)
       DETAIL=$(printf '%s' "$OUT" | sed 's/^REJECTED [0-9]*: //')
       echo "[judge] rejected; telling $COLOUR (attempt $attempt)"
-      MSG="Your move \"$MOVE\" was REJECTED by the server: $DETAIL
-
-Pick a different, legal move.
-
-$CTX" ;;
+      MSG="Your move \"$MOVE\" was REJECTED by the server: $DETAIL -- that move is not legal here, pick a different one. $CTX" ;;
     *) exit 0 ;;
   esac
 done
