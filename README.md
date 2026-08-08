@@ -112,9 +112,17 @@ itself.
 ```
 backend/     config.py  db.py  chess_logic.py  schemas.py  main.py
 judge/       judge.py  players.py  run_match.py
+judge/arena/ tc.sh  ask.sh  ply.sh  round.sh     # judging live agents in Herdr panes
 frontend/    index.html  app.js  style.css      # chessground via CDN, no build
 tests/       test_chess_logic.py  test_api.py
 ```
+
+## Judging a match between live agents
+
+`judge/judge.py` drives in-process `PlayerAgent` objects. To instead referee two real
+coding agents running in their own terminals, read **[judge/JUDGE_AGENT.md](judge/JUDGE_AGENT.md)** —
+instructions for an AI agent acting as the judge, plus the `judge/arena/` helper scripts
+it uses to prompt players over Herdr and submit their moves.
 
 ## Not included
 
