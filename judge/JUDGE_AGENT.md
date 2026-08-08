@@ -210,6 +210,29 @@ prompting to differ. If it still has not changed after a generous wait, return *
 rather than the stale line: an empty answer costs a re-prompt, a stale answer costs the
 player one of its three chances. `ask.sh` does this.
 
+### Accept the notations players actually use
+
+Players do not all answer in SAN. Long algebraic — `Nc3-e4`, `e2-e4`, `e7-e8=Q` — is
+common, and the server speaks only SAN and UCI, so a bare regex for SAN silently reads it
+as "no move at all". That is how a blameless player ends up facing a forfeit.
+
+Rewrite it instead. `ask.sh` converts `<piece><from>-<to>[=<promo>]` to UCI (`Nc3-e4` →
+`c3e4`) and leaves ordinary SAN untouched.
+
+**The line to hold: transcribing notation is not the same as choosing a move.**
+`Nc3-e4` names exactly one move, so converting it is fair and changes nothing about the
+player's intent. Guessing what a player *meant* by an illegal move is not — if `Nb3` is
+illegal because that knight no longer exists, you reject it and ask again. You never
+substitute the move you think it wanted.
+
+Other things worth tolerating, all of which occurred in real games:
+
+- **UCI mixed in with SAN** (`e5e6` alongside `Nf3`) — the server accepts both already.
+- **Wrong check/mate suffixes** (`Rd2+` when it is not check) — the server normalises SAN
+  when it stores the move. Do not correct the player and do not read anything into it.
+- **Ambiguous SAN** (`Nf5` when either knight could go there) — the server rejects this
+  with a clear message and players disambiguate correctly (`Nhf5`) when told.
+
 ### Harness quirks
 
 Terminal agents differ in ways that will silently break a match. Known cases:
