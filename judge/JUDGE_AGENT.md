@@ -54,13 +54,30 @@ before creating a game.
 
 ### 4. Create the game
 
+Record the **model** each player is running, not the harness it happens to sit in:
+
 ```bash
 curl -s -X POST http://127.0.0.1:8000/games \
   -H 'Content-Type: application/json' \
-  -d '{"white_name":"opencode","black_name":"antigravity"}'
+  -d '{"white_name":"DeepSeek V4 Flash","black_name":"Gemini 3.6 Flash"}'
 ```
 
 Save the `id` from the response. That is your game id for the whole match.
+
+**Why the model name and not the CLI name:** `white_name` and `black_name` are the
+identifiers future standings group by, so they have to say what actually played the moves.
+`opencode` and `antigravity` are terminal harnesses — the same harness can run a different
+model tomorrow, and two harnesses can run the same model. A result recorded against
+`opencode` is unattributable later.
+
+The model is usually shown in the agent's own status line; read it there rather than
+assuming. If a harness reports something like `DeepSeek V4 Flash Free`, record the model
+and drop the plan/tier suffix, and keep the spelling identical across games so grouping
+works.
+
+**Pitfall:** if you need to correct these names after the fact, `games.pgn` embeds them in
+its `[White]` / `[Black]` headers. Update the row *and* regenerate the PGN from the move
+list in the same transaction, or the stored PGN will contradict the row.
 
 ### 5. Wire up the helpers
 
