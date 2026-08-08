@@ -14,12 +14,24 @@ const el = {
   conn: document.getElementById('conn'),
   white: document.getElementById('white-player'),
   black: document.getElementById('black-player'),
+  first: document.getElementById('first'),
+  prev: document.getElementById('prev'),
+  next: document.getElementById('next'),
+  last: document.getElementById('last'),
+  live: document.getElementById('live'),
+  plyLabel: document.getElementById('ply-label'),
 };
+
+const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 let ground = null;
 let selectedId = null;
 let orientation = 'white';
 let lastRenderedFen = null;
+let currentGame = null;
+// Which ply is on the board: 0 = starting position, n = after the nth move.
+// null means "follow the latest move", so a live game keeps advancing.
+let viewPly = null;
 
 const TERMINATION_LABELS = {
   checkmate: 'checkmate',
@@ -106,10 +118,23 @@ function ensureBoard() {
   return ground;
 }
 
-function lastMoveSquares(moves) {
-  if (!moves.length) return undefined;
-  const uci = moves[moves.length - 1].uci;
-  return [uci.slice(0, 2), uci.slice(2, 4)];
+/** Board state after `ply` moves. ply 0 is the starting position. */
+function positionAt(game, ply) {
+  if (ply <= 0) {
+    return { fen: STARTING_FEN, lastMove: undefined, turnColor: 'white' };
+  }
+  const move = game.moves[ply - 1];
+  return {
+    fen: move.fen_after,
+    lastMove: [move.uci.slice(0, 2), move.uci.slice(2, 4)],
+    turnColor: move.side === 'w' ? 'black' : 'white',
+  };
+}
+
+/** The ply actually on the board: the latest one unless the user scrubbed away. */
+function effectivePly(game) {
+  if (viewPly === null) return game.moves.length;
+  return Math.max(0, Math.min(viewPly, game.moves.length));
 }
 
 function renderPlayers(game) {
@@ -145,45 +170,104 @@ function renderStatus(game) {
 function renderMoves(game) {
   el.moves.replaceChildren();
   const total = game.moves.length;
+  const shown = effectivePly(game);
+  let selectedCell = null;
+
   for (let i = 0; i < total; i += 2) {
     const num = document.createElement('li');
     num.className = 'num';
     num.textContent = `${i / 2 + 1}.`;
     el.moves.append(num);
 
-    for (const ply of [i, i + 1]) {
+    for (const index of [i, i + 1]) {
       const cell = document.createElement('li');
       cell.className = 'san';
-      if (ply < total) {
-        cell.textContent = game.moves[ply].san;
-        if (ply === total - 1) cell.classList.add('last');
+      if (index < total) {
+        const ply = index + 1;
+        cell.textContent = game.moves[index].san;
+        cell.tabIndex = 0;
+        cell.classList.add('clickable');
+        if (ply === shown) {
+          cell.classList.add('last');
+          selectedCell = cell;
+        }
+        cell.addEventListener('click', () => goTo(ply));
+        cell.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            goTo(ply);
+          }
+        });
       }
       el.moves.append(cell);
     }
   }
-  el.moves.scrollTop = el.moves.scrollHeight;
+
+  if (selectedCell) selectedCell.scrollIntoView({ block: 'nearest' });
+  else el.moves.scrollTop = 0;
+}
+
+function renderControls(game) {
+  const total = game.moves.length;
+  const shown = effectivePly(game);
+
+  el.first.disabled = shown === 0;
+  el.prev.disabled = shown === 0;
+  el.next.disabled = shown >= total;
+  el.last.disabled = shown >= total;
+
+  // "follow live" only means something while the game is still running.
+  el.live.hidden = !(game.status === 'active' && viewPly !== null);
+
+  if (shown === 0) {
+    el.plyLabel.textContent = total ? `start (0/${total})` : 'start';
+    return;
+  }
+  const move = game.moves[shown - 1];
+  const number = Math.floor((shown - 1) / 2) + 1;
+  const dots = move.side === 'w' ? '.' : '...';
+  el.plyLabel.textContent = `${number}${dots} ${move.san}  (${shown}/${total})`;
 }
 
 function renderGame(game) {
   el.empty.hidden = true;
   el.game.hidden = false;
+  currentGame = game;
 
   renderPlayers(game);
   renderStatus(game);
   renderMoves(game);
+  renderControls(game);
 
   const board = ensureBoard();
+  const position = positionAt(game, effectivePly(game));
   // Only touch the board when the position actually changed, so the animation
   // does not restart on every poll.
-  if (game.fen !== lastRenderedFen) {
+  if (position.fen !== lastRenderedFen) {
     board.set({
-      fen: game.fen.split(' ')[0],
-      lastMove: lastMoveSquares(game.moves),
-      turnColor: game.turn === 'w' ? 'white' : 'black',
+      fen: position.fen.split(' ')[0],
+      lastMove: position.lastMove,
+      turnColor: position.turnColor,
       check: false,
     });
-    lastRenderedFen = game.fen;
+    lastRenderedFen = position.fen;
   }
+}
+
+// ---------- replay navigation ----------
+
+function goTo(ply) {
+  if (!currentGame) return;
+  const total = currentGame.moves.length;
+  const target = Math.max(0, Math.min(ply, total));
+  // Scrubbing to the final move of a live game means "follow it again".
+  viewPly = (currentGame.status === 'active' && target === total) ? null : target;
+  renderGame(currentGame);
+}
+
+function step(delta) {
+  if (!currentGame) return;
+  goTo(effectivePly(currentGame) + delta);
 }
 
 async function refreshGame() {
@@ -203,6 +287,8 @@ function select(id) {
   if (id === selectedId) return;
   selectedId = id;
   lastRenderedFen = null;
+  currentGame = null;
+  viewPly = null;
   window.location.hash = id ?? '';
   for (const li of el.list.children) {
     li.classList.toggle('selected', li.dataset.id === id);
@@ -215,6 +301,8 @@ function readHash() {
   if (id && id !== selectedId) {
     selectedId = id;
     lastRenderedFen = null;
+    currentGame = null;
+    viewPly = null;
     refreshGame();
   }
 }
@@ -224,6 +312,30 @@ el.flip.addEventListener('click', () => {
   orientation = orientation === 'white' ? 'black' : 'white';
   ensureBoard().set({ orientation });
 });
+
+el.first.addEventListener('click', () => goTo(0));
+el.prev.addEventListener('click', () => step(-1));
+el.next.addEventListener('click', () => step(1));
+el.last.addEventListener('click', () => goTo(currentGame ? currentGame.moves.length : 0));
+el.live.addEventListener('click', () => {
+  viewPly = null;
+  if (currentGame) renderGame(currentGame);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.target instanceof HTMLSelectElement) return;
+  const actions = {
+    ArrowLeft: () => step(-1),
+    ArrowRight: () => step(1),
+    Home: () => goTo(0),
+    End: () => goTo(currentGame ? currentGame.moves.length : 0),
+  };
+  const action = actions[event.key];
+  if (!action) return;
+  event.preventDefault();
+  action();
+});
+
 window.addEventListener('hashchange', readHash);
 
 readHash();

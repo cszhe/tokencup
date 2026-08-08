@@ -54,8 +54,17 @@
 
         <div id="status" class="status"></div>
 
+        <div class="replay">
+          <button id="first" type="button" title="First move (Home)">|&lt;</button>
+          <button id="prev" type="button" title="Previous move (left arrow)">&lt;</button>
+          <span id="ply-label" class="ply-label">start</span>
+          <button id="next" type="button" title="Next move (right arrow)">&gt;</button>
+          <button id="last" type="button" title="Latest move (End)">&gt;|</button>
+          <button id="live" type="button" class="live-btn" hidden>follow live</button>
+        </div>
+
         <div class="moves-head">
-          <h3>Moves</h3>
+          <h3>Moves <span class="hint">click a move to jump, or use &larr; &rarr;</span></h3>
           <button id="flip" type="button">flip board</button>
         </div>
         <ol id="moves" class="moves"></ol>

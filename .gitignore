@@ -11,3 +11,6 @@ __pycache__/
 venv/
 .pytest_cache/
 .env
+
+# Per-match judge config (holds a game id and pane IDs)
+judge/arena/arena.env
