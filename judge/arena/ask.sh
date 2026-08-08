@@ -12,12 +12,26 @@ status_of() {
 # Last line in the pane that is *entirely* a move. Whole-line matching matters:
 # our own prompt echoes a move list, but that is many moves on one line, so it
 # cannot match. Box-drawing and bullet glyphs are stripped first.
+# Long algebraic ("Nc3-e4", "e2-e4", "e7-e8=Q") is a perfectly clear way to name
+# a move, but the server speaks only SAN and UCI. Rewrite it to UCI rather than
+# rejecting it -- transcribing notation is not the same as choosing a different
+# move, and a player that says Nc3-e4 has told us exactly what it wants to play.
+to_uci() {
+  python3 -c '
+import re, sys
+s = sys.argv[1]
+m = re.fullmatch(r"([KQRBN])?([a-h][1-8])[-x]([a-h][1-8])(?:=([QRBN]))?[+#]?", s)
+print(m.group(2) + m.group(3) + (m.group(4) or "").lower() if m else s)
+' "$1"
+}
+
 last_move() {
-  herdr agent read "$PANE" --source recent-unwrapped --lines 60 2>/dev/null \
+  raw=$(herdr agent read "$PANE" --source recent-unwrapped --lines 60 2>/dev/null \
     | sed 's/[│┃|]//g; s/[█▄▀●❯]//g' \
     | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
-    | grep -Ex '([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?|O-O(-O)?[+#]?|0-0(-0)?[+#]?)' \
-    | tail -1
+    | grep -Ex '([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?|[KQRBN]?[a-h][1-8][-x][a-h][1-8](=[QRBN])?[+#]?|O-O(-O)?[+#]?|0-0(-0)?[+#]?)' \
+    | tail -1)
+  [ -n "$raw" ] && to_uci "$raw"
 }
 
 BEFORE=$(last_move)
