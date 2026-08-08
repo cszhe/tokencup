@@ -113,6 +113,8 @@ Use this template, swapping WHITE/BLACK and the opponent's name:
 > - After each of your opponent's turns I will tell you the move they played.
 > - If your move is illegal or unreadable I will tell you why and ask again. Three rejected
 >   moves in a row and you forfeit the game.
+> - You have 5 minutes to reply with each move. If you take longer I will cut you off and
+>   you forfeit the game, so keep your reasoning brief and answer promptly.
 >
 > Please reply with a short greeting and the single word READY. Do not send a move yet.
 

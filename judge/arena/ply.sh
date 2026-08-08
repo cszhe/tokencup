@@ -8,6 +8,11 @@ PANE="$1"; COLOUR="$2"; CTX="$3"; MSG="$CTX"
 
 for attempt in $(seq 1 "${TC_RETRIES:-3}"); do
   MOVE=$("$D/ask.sh" "$PANE" "$MSG")
+  ASK_STATUS=$?
+  if [ "$ASK_STATUS" -eq 124 ]; then
+    echo "[judge] $COLOUR timed out mid-move -- FORFEIT"
+    exit 2
+  fi
   if [ -z "$MOVE" ]; then
     echo "[judge] $COLOUR sent no readable move (attempt $attempt)"
     MSG="I could not find a move in your reply -- reply with ONLY the move in algebraic notation and nothing else. $CTX"

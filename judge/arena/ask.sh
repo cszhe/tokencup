@@ -36,12 +36,40 @@ last_move() {
 
 BEFORE=$(last_move)
 
-if herdr agent prompt "$PANE" "$MSG" --wait --timeout 300000 >/dev/null 2>&1; then
+# herdr writes its structured error JSON to stderr on failure (stdout is
+# empty in that case), so capture stderr only -- keeps the blob clean for
+# json.load below regardless of anything herdr ever prints to stdout.
+RESP=$(herdr agent prompt "$PANE" "$MSG" --wait --timeout 300000 2>&1 1>/dev/null)
+STATUS=$?
+
+if [ "$STATUS" -eq 0 ]; then
   # --wait already blocked until the agent settled, so it is idle *now*. Polling
   # for `working` here would never match and would just burn its whole timeout
   # on every ply -- the single biggest source of dead time in a match.
   SUBMITTED_BY_HAND=0
 else
+  ERR_CODE=$(printf '%s' "$RESP" | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin).get("error", {}).get("code", ""))
+except Exception:
+    print("")
+' 2>/dev/null)
+
+  if [ "$ERR_CODE" = "timeout" ]; then
+    # The agent was genuinely still working when our budget ran out -- it is
+    # not a submission glitch. Interrupt it so it stops burning tokens in the
+    # background, and forfeit this ply now instead of polling for a reply
+    # that may never come. Same policy as PlayerTimeout on the Python path:
+    # immediate forfeit, no retry.
+    herdr agent send-keys "$PANE" ctrl+c >/dev/null 2>&1
+    exit 124
+  fi
+
+  if [ "$ERR_CODE" != "agent_prompt_stalled" ]; then
+    echo "[ask.sh] unexpected herdr error: $RESP" >&2
+  fi
+
   # Some harnesses (GitHub Copilot CLI) never submit the prompt on their own,
   # which surfaces as agent_prompt_stalled. Press Enter for them.
   herdr agent send-keys "$PANE" enter >/dev/null 2>&1
