@@ -31,6 +31,7 @@ from schemas import (
     MoveRequest,
     MoveOut,
     ResignRequest,
+    LeaderboardEntry,
 )
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -123,6 +124,13 @@ def list_games(
         rows = dbq.list_games(cur, status=status, limit=limit)
         counts = dbq.count_moves_for(cur, [row["id"] for row in rows])
         return [_summary(row, counts[row["id"]]) for row in rows]
+
+
+@app.get("/leaderboard", response_model=list[LeaderboardEntry])
+def get_leaderboard(database: Database = Depends(get_db)):
+    """Get agent leaderboard."""
+    with database.transaction() as cur:
+        return dbq.get_leaderboard(cur)
 
 
 @app.get("/games/{game_id}", response_model=GameDetail)

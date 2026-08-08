@@ -64,3 +64,12 @@ class GameDetail(GameSummary):
 
     pgn: str | None = None
     moves: list[MoveOut] = []
+
+
+class LeaderboardEntry(BaseModel):
+    agent_name: str
+    games: int
+    wins: int
+    draws: int
+    losses: int
+    win_rate: float

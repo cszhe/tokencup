@@ -20,6 +20,23 @@
   <main>
     <aside id="sidebar">
       <div class="panel-head">
+        <h2>Leaderboard</h2>
+      </div>
+      <div id="leaderboard" class="leaderboard-container">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Played</th>
+              <th>W-D-L</th>
+              <th>Win %</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+
+      <div class="panel-head">
         <h2>Games</h2>
         <select id="filter" aria-label="Filter games by status">
           <option value="">all</option>
@@ -72,6 +89,6 @@
     </section>
   </main>
 
-  <script type="module" src="/static/app.js"></script>
+  <script type="module" src="/static/app.js?v=3"></script>
 </body>
 </html>

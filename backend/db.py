@@ -209,3 +209,40 @@ def update_game_state(
         """,
         (fen, pgn, status, result, termination, game_id),
     )
+
+
+def get_leaderboard(cur) -> list[dict[str, Any]]:
+    sql = """
+    SELECT
+        agent_name,
+        COUNT(*) as games,
+        SUM(win) as wins,
+        SUM(draw) as draws,
+        SUM(loss) as losses
+    FROM (
+        SELECT white_name as agent_name,
+               CASE WHEN result='1-0' THEN 1 ELSE 0 END as win,
+               CASE WHEN result='1/2-1/2' THEN 1 ELSE 0 END as draw,
+               CASE WHEN result='0-1' THEN 1 ELSE 0 END as loss
+        FROM games
+        WHERE status='finished'
+        UNION ALL
+        SELECT black_name as agent_name,
+               CASE WHEN result='0-1' THEN 1 ELSE 0 END as win,
+               CASE WHEN result='1/2-1/2' THEN 1 ELSE 0 END as draw,
+               CASE WHEN result='1-0' THEN 1 ELSE 0 END as loss
+        FROM games
+        WHERE status='finished'
+    ) AS combined
+    GROUP BY agent_name
+    ORDER BY wins DESC, games DESC, agent_name ASC
+    """
+    cur.execute(sql)
+    rows = list(cur.fetchall())
+    for row in rows:
+        row["games"] = int(row["games"])
+        row["wins"] = int(row["wins"])
+        row["draws"] = int(row["draws"])
+        row["losses"] = int(row["losses"])
+        row["win_rate"] = float(row["wins"] / row["games"]) if row["games"] > 0 else 0.0
+    return rows

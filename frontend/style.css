@@ -203,3 +203,28 @@ main {
   main { grid-template-columns: 1fr; }
   #game-list { max-height: 240px; }
 }
+
+/* ---------- leaderboard ---------- */
+.leaderboard-container {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.leaderboard-table th {
+  color: var(--muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.leaderboard-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.leaderboard-table tr:last-child td {
+  border-bottom: none;
+}

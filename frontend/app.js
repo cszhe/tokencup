@@ -20,6 +20,7 @@ const el = {
   last: document.getElementById('last'),
   live: document.getElementById('live'),
   plyLabel: document.getElementById('ply-label'),
+  leaderboardBody: document.getElementById('leaderboard-body'),
 };
 
 const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -102,6 +103,45 @@ async function refreshList() {
     renderList(games);
   } catch (err) {
     setConnected(false);
+  }
+}
+
+async function refreshLeaderboard() {
+  try {
+    const data = await api('/leaderboard');
+    el.leaderboardBody.replaceChildren();
+    
+    if (!data.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.textContent = 'No agents yet.';
+      td.style.color = 'var(--muted)';
+      tr.append(td);
+      el.leaderboardBody.append(tr);
+      return;
+    }
+
+    for (const row of data) {
+      const tr = document.createElement('tr');
+      
+      const tdAgent = document.createElement('td');
+      tdAgent.textContent = row.agent_name;
+      
+      const tdPlayed = document.createElement('td');
+      tdPlayed.textContent = row.games;
+      
+      const tdWDL = document.createElement('td');
+      tdWDL.textContent = `${row.wins}-${row.draws}-${row.losses}`;
+      
+      const tdRate = document.createElement('td');
+      tdRate.textContent = `${(row.win_rate * 100).toFixed(1)}%`;
+      
+      tr.append(tdAgent, tdPlayed, tdWDL, tdRate);
+      el.leaderboardBody.append(tr);
+    }
+  } catch (err) {
+    console.error('Leaderboard error:', err);
   }
 }
 
@@ -203,8 +243,8 @@ function renderMoves(game) {
     }
   }
 
-  if (selectedCell) selectedCell.scrollIntoView({ block: 'nearest' });
-  else el.moves.scrollTop = 0;
+  // if (selectedCell) selectedCell.scrollIntoView({ block: 'nearest' });
+  // else el.moves.scrollTop = 0;
 }
 
 function renderControls(game) {
@@ -341,5 +381,6 @@ window.addEventListener('hashchange', readHash);
 readHash();
 refreshList();
 refreshGame();
-setInterval(refreshList, POLL_MS * 2);
+refreshLeaderboard();
+setInterval(() => { refreshList(); refreshLeaderboard(); }, POLL_MS * 2);
 setInterval(refreshGame, POLL_MS);
