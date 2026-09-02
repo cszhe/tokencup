@@ -326,6 +326,60 @@ server message is what makes the retry work**; a bare "that was illegal" is much
 - **Do not argue with the server.** It replays the entire move history to decide legality
   and it is authoritative.
 
+## Detecting engine or tool assistance (cheating)
+
+Added after a real match where a player (a coding agent in OpenCode) launched a local
+Stockfish 18 binary via `python3` subprocess calls, fed it the game FEN over UCI, and
+submitted its `bestmove` output as its own two moves in a row. It looked, from the
+extracted move alone, exactly like a normal reply -- the cheating was only visible in the
+pane's full scrollback, which the judge is not guaranteed to read every ply.
+
+**This is a conduct violation, not an illegal move.** It does not go through the
+three-strikes retry/forfeit mechanism in `ply.sh` -- a move an engine chose can be
+perfectly legal and still disqualifying, because the player never made the choice you
+briefed it to make.
+
+### The automated scan
+
+`ask.sh` now scans every pane read (not just the extracted move line) against
+`CHEAT_PATTERN`: engine names (`stockfish`, `leela chess`, `lc0`, `komodo`,
+`fairy-stockfish`), UCI protocol tokens (`bestmove`, `setoption name`, `multipv`, `uciok`,
+`readyok`, `position fen`, `go depth N`, `go movetime`), engine-library calls
+(`subprocess.Popen/run/call`, `chess.engine`), and a bare shell invocation
+(`$ python3`, `$ node`, `$ bash`, etc. -- players were told never to run *any* command,
+not just an engine).
+
+A hit exits `ask.sh` with **99**, `ply.sh` prints a halt message and exits **3**, and
+`round.sh` propagates that exit code. This is deliberately **not** an auto-forfeit: unlike
+the retry system, this call requires you, the judge, to look at the evidence yourself
+before ruling.
+
+```
+[judge] BLACK SUSPECTED OF RUNNING A COMMAND/ENGINE -- HALTING FOR JUDGE REVIEW (not auto-forfeiting)
+```
+
+When you see this:
+
+1. `herdr agent read <pane> --source recent-unwrapped --lines 150` (or more) and read the
+   matched line(s) `ask.sh` printed to stderr in context. Confirm it is an actual command
+   execution or engine output, not just the word "Stockfish" in prose (`grep -i stockfish`
+   matches both -- the scan is a blocklist, not a verdict).
+2. If it is real: confront the player directly, quote exactly what you saw, and end the
+   game as a forfeit for conduct via `./tc.sh --resign <side>` -- the same way you would
+   for any other rule violation, just skipped past the illegal-move retry loop, since the
+   problem is not move legality.
+3. If it is a false positive (e.g. the player was reasoning in prose about an engine
+   without running one): resume the turn loop from where it stopped. `ply.sh` did not
+   burn a retry attempt for this, so nothing needs resetting.
+
+**What this scan does not catch:** a player that reasons like an engine without ever
+calling one, one that runs its command in a way the pane doesn't surface (a background
+job, a renamed binary, analysis done in an earlier turn you already scrolled past), or one
+whose harness hides tool calls behind a collapsed "Click to expand" the read can still see
+as text but a shorter `--lines` window might miss. Treat a clean scan as "nothing obvious
+was caught," not as proof the player played straight -- the pane is still worth a skim on
+a suspiciously strong game from a weak model.
+
 ## Ending the game
 
 The server ends the game by itself on checkmate, stalemate, insufficient material,
@@ -374,6 +428,7 @@ or lost — do not soften a loss into ambiguity.
 [ ] full move list resent in every prompt, taken from the server
 [ ] server's own rejection text quoted back to the player on 400/409
 [ ] 3 strikes -> forfeit via ./tc.sh --resign <side>
+[ ] ask.sh exit 99 / ply.sh exit 3 -> stop, read the pane yourself, don't auto-forfeit or auto-resume
 [ ] game reaches status: finished
 [ ] both players told the result and given the PGN
 ```

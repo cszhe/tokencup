@@ -1,7 +1,10 @@
 #!/bin/bash
 # One ply, applying the judge's retry policy.
 # usage: ply.sh <pane-id> <WHITE|BLACK> <context message>
-# exit 0 = move accepted, exit 2 = player burned its retry budget (forfeit).
+# exit 0 = move accepted, exit 2 = player burned its retry budget (forfeit),
+# exit 3 = ask.sh flagged suspected engine/command use -- STOP, do not retry
+# or auto-forfeit, go read the pane and rule on it yourself (see
+# JUDGE_AGENT.md, "Detecting engine or tool assistance").
 D="$(cd "$(dirname "$0")" && pwd)"
 . "$D/arena.env"
 PANE="$1"; COLOUR="$2"; CTX="$3"; MSG="$CTX"
@@ -12,6 +15,10 @@ for attempt in $(seq 1 "${TC_RETRIES:-3}"); do
   if [ "$ASK_STATUS" -eq 124 ]; then
     echo "[judge] $COLOUR timed out mid-move -- FORFEIT"
     exit 2
+  fi
+  if [ "$ASK_STATUS" -eq 99 ]; then
+    echo "[judge] $COLOUR SUSPECTED OF RUNNING A COMMAND/ENGINE -- HALTING FOR JUDGE REVIEW (not auto-forfeiting)"
+    exit 3
   fi
   if [ -z "$MOVE" ]; then
     echo "[judge] $COLOUR sent no readable move (attempt $attempt)"

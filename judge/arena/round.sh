@@ -1,7 +1,9 @@
 #!/bin/bash
 # Play one full move (White, then Black).
 # usage: round.sh <move-number>
-# exit 0 = both plies played, 1 = game already over, 2 = a side forfeited.
+# exit 0 = both plies played, 1 = game already over, 2 = a side forfeited,
+# 3 = ply.sh flagged suspected engine/command use -- go review the pane
+# before ruling, do not treat this as a forfeit on its own.
 D="$(cd "$(dirname "$0")" && pwd)"
 . "$D/arena.env"
 N="$1"

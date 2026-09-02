@@ -2,6 +2,8 @@
 # Prompt a player agent in a Herdr pane and extract the move from its reply.
 # usage: ask.sh <pane-id> <message>
 # Prints the move on stdout, or nothing if no move could be found.
+# Exit 99 = the pane shows signs the player ran a command or chess engine
+# instead of choosing a move itself (see CHEAT_PATTERN below).
 PANE="$1"; MSG="$2"
 
 status_of() {
@@ -9,9 +11,29 @@ status_of() {
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["agent"]["agent_status"])' 2>/dev/null
 }
 
-# Last line in the pane that is *entirely* a move. Whole-line matching matters:
-# our own prompt echoes a move list, but that is many moves on one line, so it
-# cannot match. Box-drawing and bullet glyphs are stripped first.
+# Signatures of a player running a chess engine or shelling out, caught after a
+# real match where a player launched Stockfish via python subprocess calls and
+# submitted its bestmove output. This is a blocklist, not a proof of innocence:
+# it catches an engine invocation left visible in the pane, not a player that
+# reasons like an engine without running one, or hides the command better. It
+# still needs a human judge to confirm before ruling -- see ply.sh exit 99 and
+# JUDGE_AGENT.md's "Detecting engine or tool assistance" section.
+CHEAT_PATTERN='stockfish|leela ?chess|\blc0\b|komodo|fairy-stockfish|\bbestmove\b|setoption name|multipv|\buciok\b|\breadyok\b|position fen|go depth [0-9]|go movetime|subprocess\.(Popen|run|call)|chess\.engine|^\$ *(python3?|node|bash|sh|ruby|perl|cargo run|go run)\b'
+
+# One cleaned pane read, reused for both the cheat scan and the move search --
+# reading twice per check would risk the two seeing different content.
+read_pane() {
+  herdr agent read "$PANE" --source recent-unwrapped --lines 60 2>/dev/null \
+    | sed 's/[│┃|]//g; s/[█▄▀●❯]//g' \
+    | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+# $1 = cleaned pane text. Prints matching lines (for the judge's evidence) and
+# returns non-zero if nothing matched.
+check_cheat() {
+  printf '%s\n' "$1" | grep -iE "$CHEAT_PATTERN"
+}
+
 # Long algebraic ("Nc3-e4", "e2-e4", "e7-e8=Q") is a perfectly clear way to name
 # a move, but the server speaks only SAN and UCI. Rewrite it to UCI rather than
 # rejecting it -- transcribing notation is not the same as choosing a different
@@ -25,16 +47,25 @@ print(m.group(2) + m.group(3) + (m.group(4) or "").lower() if m else s)
 ' "$1"
 }
 
-last_move() {
-  raw=$(herdr agent read "$PANE" --source recent-unwrapped --lines 60 2>/dev/null \
-    | sed 's/[│┃|]//g; s/[█▄▀●❯]//g' \
-    | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
+# Last line in the pane that is *entirely* a move. Whole-line matching matters:
+# our own prompt echoes a move list, but that is many moves on one line, so it
+# cannot match. $1 = cleaned pane text (from read_pane).
+last_move_from() {
+  raw=$(printf '%s\n' "$1" \
     | grep -Ex '([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?|[KQRBN]?[a-h][1-8][-x][a-h][1-8](=[QRBN])?[+#]?|O-O(-O)?[+#]?|0-0(-0)?[+#]?)' \
     | tail -1)
   [ -n "$raw" ] && to_uci "$raw"
 }
 
-BEFORE=$(last_move)
+fail_cheat() {
+  echo "[ask.sh] SUSPECTED ENGINE/COMMAND USE by $PANE -- matched line(s):" >&2
+  printf '%s\n' "$1" | head -5 >&2
+  exit 99
+}
+
+PANE_TEXT=$(read_pane)
+HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
+BEFORE=$(last_move_from "$PANE_TEXT")
 
 # herdr writes its structured error JSON to stderr on failure (stdout is
 # empty in that case), so capture stderr only -- keeps the blob clean for
@@ -94,12 +125,18 @@ fi
 
 # Phase 3: the reply must be NEW. Herdr cannot always tell that a given harness
 # is working, so the settle poll above may fall straight through while the agent
-# is still thinking, leaving the previous answer as the last move-line.
-MOVE=$(last_move)
+# is still thinking, leaving the previous answer as the last move-line. Each
+# re-read is scanned for cheat signatures too, so a mid-turn engine call is
+# caught even if it happens after the initial read above.
+PANE_TEXT=$(read_pane)
+HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
+MOVE=$(last_move_from "$PANE_TEXT")
 for _ in $(seq 1 20); do
   [ -n "$MOVE" ] && [ "$MOVE" != "$BEFORE" ] && break
   sleep 3
-  MOVE=$(last_move)
+  PANE_TEXT=$(read_pane)
+  HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
+  MOVE=$(last_move_from "$PANE_TEXT")
 done
 
 # Still unchanged after a minute: treat it as no answer, not as a move. Printing
