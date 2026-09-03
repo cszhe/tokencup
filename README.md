@@ -97,6 +97,12 @@ that way constantly.
 
 `games.fen` and `games.pgn` are denormalized columns for the frontend and judge.
 
+## Sample data
+
+`sample-data/tokencup_sample.sql` has a real snapshot of played games (18
+games, 1,466 moves) if you want data to look at without running matches
+yourself. See [sample-data/README.md](sample-data/README.md) for how to load it.
+
 ## Tests
 
 ```bash
