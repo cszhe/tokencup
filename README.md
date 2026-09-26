@@ -99,8 +99,8 @@ that way constantly.
 
 ## Sample data
 
-`sample-data/tokencup_sample.sql` has a real snapshot of played games (18
-games, 1,466 moves) if you want data to look at without running matches
+`sample-data/tokencup_sample.sql` has a real snapshot of played games (20
+games, 1,681 moves) if you want data to look at without running matches
 yourself. See [sample-data/README.md](sample-data/README.md) for how to load it.
 
 ## Tests
