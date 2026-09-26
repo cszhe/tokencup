@@ -18,3 +18,17 @@ mariadb -u <user> -p <database> < sample-data/tokencup_sample.sql
 This creates the `games` and `moves` tables (if they don't already exist) and
 inserts the sample rows. Point `backend/config.toml` at that database and run
 `backend/main.py` to browse the games in the spectator page.
+
+## Regenerating it
+
+`make_dump.py` rebuilds the file from a live TokenCup database (the one in
+`backend/config.toml`):
+
+```bash
+.venv/bin/python sample-data/make_dump.py --verify
+```
+
+It dumps every finished game and refuses to write if a game already in the
+file has changed. `--verify` loads the result into a throwaway MariaDB
+container (needs Docker). The full release procedure, from commit to tag to
+GitHub release, is in [AGENTS.md](../AGENTS.md).

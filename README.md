@@ -120,7 +120,8 @@ backend/     config.py  db.py  chess_logic.py  schemas.py  main.py
 judge/       judge.py  players.py  run_match.py
 judge/arena/ tc.sh  ask.sh  ply.sh  round.sh     # judging live agents in Herdr panes
 frontend/    index.html  app.js  style.css      # chessground via CDN, no build
-tests/       test_chess_logic.py  test_api.py
+tests/       test_chess_logic.py  test_api.py  test_make_dump.py
+sample-data/ tokencup_sample.sql  make_dump.py  # sample games + the script that regenerates them
 ```
 
 ## Judging a match between live agents
