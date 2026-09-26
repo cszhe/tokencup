@@ -11,6 +11,15 @@ status_of() {
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["agent"]["agent_status"])' 2>/dev/null
 }
 
+# Herdr can report an Antigravity pane `done` while the model is still
+# thinking, so also treat its braille spinner (U+2801-U+28FF at the start of a
+# line near the bottom of the pane) as busy.
+is_busy() {
+  [ "$(status_of)" = "working" ] && return 0
+  herdr agent read "$PANE" --source recent-unwrapped --lines 15 2>/dev/null \
+    | grep -qP '^\s*[\x{2801}-\x{28FF}]'
+}
+
 # Signatures of a player running a chess engine or shelling out, caught after a
 # real match where a player launched Stockfish via python subprocess calls and
 # submitted its bestmove output. This is a blocklist, not a proof of innocence:
@@ -62,6 +71,15 @@ fail_cheat() {
   printf '%s\n' "$1" | head -5 >&2
   exit 99
 }
+
+# Never prompt a player that is still answering an earlier prompt: the new one
+# queues behind it, and the late answer to the old prompt is then read as the
+# answer to this one. Wait (up to the 5-minute move limit) so that any late
+# answer is already on screen when BEFORE is recorded below.
+for _ in $(seq 1 100); do
+  is_busy || break
+  sleep 3
+done
 
 PANE_TEXT=$(read_pane)
 HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
@@ -131,8 +149,16 @@ fi
 PANE_TEXT=$(read_pane)
 HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
 MOVE=$(last_move_from "$PANE_TEXT")
-for _ in $(seq 1 20); do
+# Antigravity can let --wait return while the model is still thinking. The
+# idle budget (20 checks, ~1 min) only runs down while the agent is not busy,
+# so a player that is visibly still thinking gets up to the 5-minute move
+# limit from its briefing instead of a spurious re-prompt that would queue
+# behind its current turn.
+IDLE_CHECKS=0
+for _ in $(seq 1 100); do
   [ -n "$MOVE" ] && [ "$MOVE" != "$BEFORE" ] && break
+  is_busy || IDLE_CHECKS=$((IDLE_CHECKS + 1))
+  [ "$IDLE_CHECKS" -ge 20 ] && break
   sleep 3
   PANE_TEXT=$(read_pane)
   HIT=$(check_cheat "$PANE_TEXT") && fail_cheat "$HIT"
