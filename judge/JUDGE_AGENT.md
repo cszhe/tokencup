@@ -242,12 +242,24 @@ Terminal agents differ in ways that will silently break a match. Known cases:
 | Harness | Quirk | Handling |
 | --- | --- | --- |
 | GitHub Copilot CLI | **Never submits a multi-line prompt** — Enter inserts a newline, so prompts pile up unsent in the input box | Keep every prompt to a single line; `ask.sh` also presses Enter when Herdr reports `agent_prompt_stalled` |
-| OpenCode, Antigravity | Submit normally | Nothing needed |
+| Antigravity | **Herdr can report the pane `done` while the model is still thinking**, so `--wait` returns early; a braille spinner (`⣯ …`) in the pane is the real tell | `ask.sh` treats the spinner as busy: it will not prompt a busy player, and waits up to the 5-minute move limit rather than ~1 min while the spinner is up |
+| OpenCode | Submits normally | Nothing needed |
 
 **Keep every prompt on one line.** It costs nothing on harnesses that do not need it and is
 the difference between working and silently doing nothing on ones that do. If a player
 seems to have stopped responding, look at its pane before assuming anything about the
 player — unsent text in the input box is the tell.
+
+**Never prompt a player that is still answering.** The new prompt does not interrupt; it
+queues behind the current one, and the player then answers both. In a match with two
+thinking models in Antigravity (Claude Opus 4.6 took 35–90s per move), the old ~1-minute
+wait gave up early, and the "I could not find a move" re-prompt queued behind a move the
+player was still thinking about. The reply to that re-prompt was submitted as the reply to
+the rejection that followed, and the next turn's prompt was sent while the player was
+still answering the previous one. It came out fair only because the judge paused the loop
+and read the pane. A queued prompt shows as a `▸ <your prompt text>` line under the
+spinner. If you see one, stop the loop, wait for the player to go idle, and take the move
+that follows your latest prompt.
 
 ### Do not add fixed sleeps to the turn loop
 
